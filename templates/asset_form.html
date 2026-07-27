@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}{{ 'Редактировать' if asset else 'Добавить' }} ОС{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Реестры</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('registry_view', registry_id=registry.id) }}">{{ registry.name }}</a></li>
+    <li class="breadcrumb-item active">{{ 'Редактировать' if asset else 'Добавить' }}</li>
+  </ol>
+</nav>
+<h1>{{ 'Редактировать' if asset else 'Добавить' }} основное средство</h1>
+<form method="POST" class="row g-3 mt-2">
+  <div class="col-md-2">
+    <label class="form-label">Подразделение</label>
+    <input type="text" name="department" class="form-control"
+           value="{{ asset.department if asset else '' }}">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Инв. № <span class="ro-star">*</span></label>
+    <input type="text" name="inventory_number" class="form-control" required
+           value="{{ asset.inventory_number if asset else '' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Шифр <span class="ro-star">*</span></label>
+    <input type="text" name="cipher" class="form-control"
+           value="{{ asset.cipher if asset else '' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-1">
+    <label class="form-label">Кол-во <span class="ro-star">*</span></label>
+    <input type="number" name="quantity" min="1" class="form-control"
+           value="{{ asset.quantity if asset else '1' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Ед.изм. <span class="ro-star">*</span></label>
+    <input type="text" name="unit" class="form-control"
+           value="{{ asset.unit if asset else '' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Срок пол.исп. (мес) <span class="ro-star">*</span></label>
+    <input type="number" name="useful_life_months" min="1" class="form-control" required
+           value="{{ asset.useful_life_months if asset else '' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Наименование <span class="ro-star">*</span></label>
+    <input type="text" name="name" class="form-control" required
+           value="{{ asset.name if asset else '' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Дата ввода <span class="ro-star">*</span></label>
+    <input type="date" name="start_date" class="form-control" required
+           value="{{ asset.start_date.isoformat() if asset else today }}" {{ 'readonly' if asset }}>
+  </div>
+  <input type="hidden" name="initial_cost" value="{{ asset.initial_cost if asset else '0' }}">
+  <div class="col-md-3">
+    <label class="form-label">Остаточная стоимость <span class="ro-star">*</span></label>
+    <input type="number" name="salvage_value" step="0.01" class="form-control"
+           value="{{ asset.salvage_value if asset else '0' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">S/N <span class="ro-star">*</span></label>
+    <input type="text" name="serial_number" class="form-control"
+           value="{{ asset.serial_number if asset else '' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Тип <span class="ro-star">*</span></label>
+    <input type="text" name="equipment_type" class="form-control"
+           value="{{ asset.equipment_type if asset else '' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Место установки</label>
+    <input type="text" name="location" class="form-control"
+           value="{{ asset.location if asset else '' }}">
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Признак</label>
+    <input type="text" name="indicator" class="form-control"
+           value="{{ asset.indicator if asset else '' }}" {{ 'readonly' if asset }}>
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Дата вывода (ЗИП)</label>
+    <input type="date" name="inactive_date" class="form-control"
+           value="{{ asset.inactive_date.isoformat() if asset and asset.inactive_date else '' }}">
+  </div>
+  <div class="col-md-2">
+    <label class="form-label">Дата работы (ЗИПа)</label>
+    <input type="date" name="resume_date" class="form-control"
+           value="{{ asset.resume_date.isoformat() if asset and asset.resume_date else '' }}">
+  </div>
+  <input type="hidden" name="responsible_person" value="{{ asset.responsible_person if asset else '' }}">
+  <div class="col-md-4">
+    <label class="form-label">Объект установки (карточка)</label>
+    <input type="text" name="card" class="form-control" list="card-list"
+           value="{{ asset.card if asset and asset.card else '' }}"
+           autocomplete="off" placeholder="выберите или введите">
+    <datalist id="card-list">
+      {% for c in card_list %}
+      <option value="{{ c }}">
+      {% endfor %}
+    </datalist>
+  </div>
+  <div class="col-12">
+    <label class="form-label">Примечания</label>
+    <textarea name="notes" class="form-control" rows="2">{{ asset.notes if asset else '' }}</textarea>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Группа</label>
+    <div class="input-group">
+      <input type="text" name="category_name" class="form-control" list="group-list" id="group-input"
+             value="{{ asset.category_rel.name if asset and asset.category_rel else '' }}"
+             autocomplete="off" placeholder="выберите или введите">
+      <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="group-btn"
+              onclick="document.getElementById('group-input').focus();">
+      </button>
+    </div>
+    <datalist id="group-list">
+      {% for cat in categories %}
+      <option value="{{ cat.name }}">
+      {% endfor %}
+    </datalist>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Статус</label>
+    <select name="status" class="form-select">
+      <option value="active" {{ 'selected' if not asset or asset.status == 'active' }}>В эксплуатации</option>
+      <option value="zip" {{ 'selected' if asset and asset.status == 'zip' }}>ЗИП</option>
+      <option value="repair" {{ 'selected' if asset and asset.status == 'repair' }}>В ремонте</option>
+      <option value="disposed" {{ 'selected' if asset and asset.status == 'disposed' }}>Списано</option>
+      <option value="for_disposal" {{ 'selected' if asset and asset.status == 'for_disposal' }}>На списание</option>
+      <option value="transferred" {{ 'selected' if asset and asset.status == 'transferred' }}>Передано</option>
+      <option value="unused" {{ 'selected' if asset and asset.status == 'unused' }}>Не используется</option>
+      <option value="undefined" {{ 'selected' if asset and asset.status == 'undefined' }}>Не определено</option>
+    </select>
+  </div>
+  <div class="col-md-3">
+    <label class="form-label">Дата статуса</label>
+    <input type="date" name="status_date" class="form-control"
+           value="{{ asset.status_date.isoformat() if asset and asset.status_date else '' }}">
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Комментарий статуса</label>
+    <input type="text" name="status_comment" class="form-control"
+           value="" placeholder="причина смены статуса">
+  </div>
+  <div class="col-12">
+    <button type="submit" class="btn btn-success">{{ 'Сохранить' if asset else 'Добавить' }}</button>
+    <a href="{{ url_for('registry_view', registry_id=registry.id) }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+  <div class="col-12">
+    <small class="text-muted"><span class="ro-star">*</span> — информация по бухгалтерскому учету</small>
+  </div>
+</form>
+<script>
+document.getElementById('group-btn').addEventListener('click', function(){
+  var inp = document.getElementById('group-input');
+  inp.value = '';
+  inp.focus();
+  var evt = new MouseEvent('mousedown', {bubbles: true});
+  inp.dispatchEvent(evt);
+});
+</script>
+{% endblock %}

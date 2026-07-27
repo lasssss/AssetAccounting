@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% block title %}{{ registry.name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Реестры</a></li>
+    <li class="breadcrumb-item active">{{ registry.name }}</li>
+  </ol>
+</nav>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>{{ registry.name }}</h1>
+  <div>
+    <a href="{{ url_for('registry_cards', registry_id=registry.id) }}" class="btn btn-outline-info">Карточки</a>
+    <a href="{{ url_for('trash_view', registry_id=registry.id) }}" class="btn btn-outline-danger">Корзина</a>
+    <a href="{{ url_for('asset_create', registry_id=registry.id) }}" class="btn btn-primary">+ Добавить</a>
+    <a href="{{ url_for('asset_import', registry_id=registry.id) }}" class="btn btn-success">Импорт Excel</a>
+    <a href="{{ url_for('registry_export', registry_id=registry.id) }}?{{ query_params }}" class="btn btn-outline-primary">Экспорт Excel</a>
+  </div>
+</div>
+
+<form method="GET" class="row g-2 mb-3">
+  <div class="col-md-3">
+    <input type="text" name="search" class="form-control" placeholder="Поиск..." value="{{ search }}">
+  </div>
+  <div class="col-md-2">
+    <select name="card" class="form-select">
+      <option value="">Все карточки</option>
+      {% for c in cards %}
+      <option value="{{ c }}" {{ 'selected' if filter_card == c }}>{{ c }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="type" class="form-select">
+      <option value="">Все типы</option>
+      {% for t in types %}
+      <option value="{{ t }}" {{ 'selected' if filter_type == t }}>{{ t }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="category" class="form-select">
+      <option value="">Все группы</option>
+      {% for cat in categories %}
+      <option value="{{ cat.id }}" {{ 'selected' if filter_cat == cat.id|string }}>{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select name="status" class="form-select">
+      <option value="">Все статусы</option>
+      {% for s in statuses %}
+      <option value="{{ s }}" {{ 'selected' if filter_status == s }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-1">
+    <button type="submit" class="btn btn-outline-primary w-100">🔍</button>
+  </div>
+  <div class="col-md-auto d-flex align-items-center">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="zero_residual" value="1" id="zeroResidual"
+             {{ 'checked' if zero_residual }} onchange="this.form.submit()">
+      <label class="form-check-label" for="zeroResidual">0-я стоимость</label>
+    </div>
+  </div>
+</form>
+
+<div class="row mb-3">
+  <div class="col-md-3"><div class="card text-bg-primary"><div class="card-body">
+    <h5>Всего</h5><p class="display-6">{{ stats.total }}</p>
+  </div></div></div>
+  <div class="col-md-3"><div class="card text-bg-success"><div class="card-body">
+    <h5>В эксплуатации</h5><p class="display-6">{{ stats.active }}</p>
+  </div></div></div>
+  <div class="col-md-3"><div class="card text-bg-secondary"><div class="card-body">
+    <h5>Списано</h5><p class="display-6">{{ stats.disposed }}</p>
+  </div></div></div>
+  <div class="col-md-3"><div class="card text-bg-info"><div class="card-body">
+    <h5>Стоимость</h5><p class="display-6">{{ "{:,.0f}".format(stats.total_cost) }} ₽</p>
+  </div></div></div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0">
+        <thead><tr>
+          <th>Инв. №</th><th>Наименование</th><th>Остат. стоимость</th><th>Карточка</th>
+          <th>Статус</th><th></th>
+        </tr></thead>
+        <tbody>
+          {% for asset in assets %}
+          <tr>
+            <td>{{ asset.inventory_number }}</td>
+            <td><a href="{{ url_for('asset_detail', registry_id=registry.id, asset_id=asset.id) }}">{{ asset.name }}</a></td>
+            <td>{{ "{:,.2f}".format(asset.salvage_value) }}</td>
+            <td>{{ asset.card or '—' }}</td>
+            <td><span class="badge bg-{{ 'success' if asset.status == 'active' else 'primary' if asset.status == 'zip' else 'warning' if asset.status == 'repair' else 'secondary' if asset.status == 'disposed' else 'danger' if asset.status == 'for_disposal' else 'info' if asset.status == 'transferred' else 'dark' if asset.status == 'unused' else 'light text-dark' }}">{{ asset.status_display }}</span>
+              {% if asset.status_date %}<br><small class="text-muted">{{ asset.status_date.isoformat() }}</small>{% endif %}</td>
+            <td>
+              <a href="{{ url_for('asset_edit', registry_id=registry.id, asset_id=asset.id) }}" class="btn btn-sm btn-outline-secondary">✏️</a>
+              <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ asset.id }}">🗑️</button>
+              <div class="modal fade" id="deleteModal{{ asset.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                  <div class="modal-content">
+                    <form method="POST" action="{{ url_for('asset_delete', registry_id=registry.id, asset_id=asset.id) }}">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Удаление: {{ asset.inventory_number }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <p>Удалить <strong>{{ asset.name }}</strong>?</p>
+                        <div class="mb-3">
+                          <label class="form-label">Причина удаления</label>
+                          <textarea name="reason" class="form-control" rows="3" required></textarea>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button type="submit" class="btn btn-danger">Удалить</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="text-center text-muted py-4">
+            Нет данных. <a href="{{ url_for('asset_create', registry_id=registry.id) }}">Добавить</a>
+            или <a href="{{ url_for('asset_import', registry_id=registry.id) }}">импортировать</a>.
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

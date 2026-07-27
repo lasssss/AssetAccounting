@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Перемещение — {{ asset.name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Реестры</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('registry_view', registry_id=registry.id) }}">{{ registry.name }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('asset_detail', registry_id=registry.id, asset_id=asset.id) }}">{{ asset.inventory_number }}</a></li>
+    <li class="breadcrumb-item active">Перемещение</li>
+  </ol>
+</nav>
+<h3>Перемещение / Списание: {{ asset.name }}</h3>
+<form method="POST" class="row g-3 mt-2">
+  <div class="col-md-4">
+    <label class="form-label">Дата *</label>
+    <input type="date" name="date" class="form-control" required value="{{ today }}">
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Тип *</label>
+    <select name="movement_type" class="form-select" required>
+      <option value="transfer">Перемещение</option>
+      <option value="disposal">Списание</option>
+    </select>
+  </div>
+  <div class="col-md-4">
+    <label class="form-label">Номер документа</label>
+    <input type="text" name="document_number" class="form-control">
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Откуда</label>
+    <input type="text" name="from_location" class="form-control">
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Куда</label>
+    <input type="text" name="to_location" class="form-control">
+  </div>
+  <div class="col-12">
+    <label class="form-label">Основание</label>
+    <textarea name="reason" class="form-control" rows="2"></textarea>
+  </div>
+  <div class="col-12">
+    <button type="submit" class="btn btn-success">Сохранить</button>
+    <a href="{{ url_for('asset_detail', registry_id=registry.id, asset_id=asset.id) }}" class="btn btn-outline-secondary">Отмена</a>
+  </div>
+</form>
+{% endblock %}

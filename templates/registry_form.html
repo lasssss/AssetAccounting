@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block title %}Новый реестр{% endblock %}
+{% block content %}
+<h1>Создать реестр</h1>
+<form method="POST" class="mt-3">
+  <div class="mb-3">
+    <label class="form-label">Название *</label>
+    <input type="text" name="name" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Описание</label>
+    <textarea name="description" class="form-control" rows="2"></textarea>
+  </div>
+  <button type="submit" class="btn btn-success">Создать</button>
+  <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Отмена</a>
+</form>
+{% endblock %}

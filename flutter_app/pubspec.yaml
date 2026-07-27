@@ -1,0 +1,28 @@
+name: asset_accounting
+description: Учёт основных средств
+publish_to: 'none'
+version: 1.0.0
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  path_provider: ^2.1.1
+  file_picker: ^6.1.1
+  excel: ^3.0.0
+  intl: ^0.19.0
+  image_picker: ^1.0.4
+  permission_handler: ^11.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

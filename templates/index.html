@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}Реестры ОС{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Реестры основных средств</h1>
+  <div>
+    <a href="{{ url_for('export_db') }}" class="btn btn-outline-secondary me-1">Резервная копия</a>
+    <form method="POST" action="{{ url_for('import_db') }}" enctype="multipart/form-data" style="display:inline" onsubmit="return confirm('Заменить текущую базу данных из архива? Это действие необратимо.')">
+      <label class="btn btn-outline-warning me-1 mb-0">
+        Восстановить <input type="file" name="file" accept=".zip" hidden onchange="this.form.submit()">
+      </label>
+    </form>
+    <a href="{{ url_for('registry_create') }}" class="btn btn-primary">+ Создать реестр</a>
+  </div>
+</div>
+{% if registries %}
+<div class="row">
+  {% for reg in registries %}
+  <div class="col-md-4 mb-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <h5 class="card-title">{{ reg.name }}</h5>
+        <p class="card-text text-muted small">{{ reg.description or '—' }}</p>
+        <p class="card-text"><small>Создан: {{ reg.created_at.isoformat() }}</small></p>
+        <a href="{{ url_for('registry_view', registry_id=reg.id) }}" class="btn btn-outline-primary btn-sm">Открыть</a>
+        <form method="POST" action="{{ url_for('registry_delete', registry_id=reg.id) }}" style="display:inline"
+              onsubmit="return confirm('Удалить реестр?')">
+          <button type="submit" class="btn btn-outline-danger btn-sm">Удалить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-muted">Нет реестров. <a href="{{ url_for('registry_create') }}">Создайте первый</a>.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+{% block title %}Карточки — {{ registry.name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Реестры</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('registry_view', registry_id=registry.id) }}">{{ registry.name }}</a></li>
+    <li class="breadcrumb-item active">Карточки</li>
+  </ol>
+</nav>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1>Карточки</h1>
+  <a href="{{ url_for('registry_view', registry_id=registry.id) }}" class="btn btn-outline-primary">К реестру</a>
+</div>
+
+{% if cards %}
+<div class="row g-3">
+  {% for card in cards %}
+  <div class="col-md-4 col-lg-3">
+    <button class="btn btn-light w-100 text-start p-3 border card-btn"
+            data-card-name="{{ card.name }}" data-bs-toggle="modal" data-bs-target="#cardModal">
+      <div class="d-flex justify-content-between align-items-center">
+        <strong>{{ card.name }}</strong>
+        <span class="badge bg-primary rounded-pill">{{ card.count }}</span>
+      </div>
+    </button>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">Нет карточек. Создайте основные средства с заполненным полем «Карточка».</div>
+{% endif %}
+
+<!-- Modal -->
+<div class="modal fade" id="cardModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cardModalTitle">Загрузка...</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="cardModalBody">
+        <div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>
+      </div>
+      <div class="modal-footer d-flex justify-content-between">
+        <div id="cardModalUpload" style="display:none">
+          <input type="file" id="photoInput" accept="image/*" class="form-control form-control-sm d-inline-block w-auto">
+          <button type="button" class="btn btn-sm btn-success" id="photoUploadBtn">Загрузить фото</button>
+          <button type="button" class="btn btn-sm btn-outline-primary ms-2" id="exportBtn">Экспорт Excel</button>
+        </div>
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+.checklist-card { min-height:200px; }
+.checklist-card .list-group-item { font-size:0.9rem; }
+.checklist-card .list-group-item .checklist-del { opacity:0; transition:opacity .15s; }
+.checklist-card .list-group-item:hover .checklist-del { opacity:1; }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modal = document.getElementById('cardModal');
+  const title = document.getElementById('cardModalTitle');
+  const body = document.getElementById('cardModalBody');
+  const uploadDiv = document.getElementById('cardModalUpload');
+  const photoInput = document.getElementById('photoInput');
+  const photoUploadBtn = document.getElementById('photoUploadBtn');
+  var currentCardName = '';
+
+  modal.addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    currentCardName = btn.dataset.cardName;
+    title.textContent = 'Карточка: ' + currentCardName;
+    body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"></div></div>';
+    uploadDiv.style.display = 'none';
+    loadCardData(currentCardName);
+  });
+
+  function loadCardData(cardName) {
+    var p1 = fetch('/registry/{{ registry.id }}/api/cards/' + encodeURIComponent(cardName)).then(function (r) { return r.json(); });
+    var p2 = fetch('/registry/{{ registry.id }}/api/cards/' + encodeURIComponent(cardName) + '/list').then(function (r) { return r.json(); });
+    Promise.all([p1, p2]).then(function (results) {
+      var data = results[0], listData = results[1];
+      var html = '<div class="row">';
+      html += '<div class="col-md-8">';
+
+      // Assets table
+      if (!data.assets || data.assets.length === 0) {
+        html += '<p class="text-muted text-center py-4">Нет активов в этой карточке</p>';
+      } else {
+        html += '<div class="table-responsive"><table class="table table-hover table-sm">';
+        html += '<thead><tr><th>Инв. №</th><th>Наименование</th><th>Статус</th><th>Место</th></tr></thead><tbody>';
+        data.assets.forEach(function (a) {
+          var sb = 'secondary';
+          if (a.status === 'active') sb = 'success';
+          else if (a.status === 'zip') sb = 'primary';
+          else if (a.status === 'repair') sb = 'warning';
+          else if (a.status === 'disposed') sb = 'secondary';
+          else if (a.status === 'for_disposal') sb = 'danger';
+          else if (a.status === 'transferred') sb = 'info';
+          else if (a.status === 'unused') sb = 'dark';
+          html += '<tr>';
+          html += '<td>' + a.inventory_number + '</td>';
+          html += '<td><a href="/registry/{{ registry.id }}/assets/' + a.id + '">' + a.name + '</a></td>';
+          html += '<td><span class="badge bg-' + sb + '">' + a.status_display + '</span></td>';
+          html += '<td>' + a.location + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+      }
+
+      html += '</div>';
+      html += '<div class="col-md-4"><div class="card checklist-card"><div class="card-body">';
+      html += '<input type="text" class="form-control form-control-sm mb-2 checklist-title" value="' + (listData.title || '') + '" placeholder="Заголовок списка">';
+      html += '<ol class="list-group list-group-numbered mb-2" id="checklistOl">';
+      if (listData.items && listData.items.length > 0) {
+        listData.items.forEach(function (item) {
+          html += '<li class="list-group-item d-flex justify-content-between align-items-center py-1 px-2" data-id="' + item.id + '">';
+          html += '<span class="checklist-text">' + escapeHtml(item.text) + '</span>';
+          html += '<button class="btn btn-sm btn-outline-danger py-0 px-1 checklist-del" data-id="' + item.id + '" title="Удалить">&times;</button>';
+          html += '</li>';
+        });
+      }
+      html += '</ol>';
+      html += '<div class="input-group input-group-sm">';
+      html += '<input type="text" class="form-control checklist-new-text" placeholder="Добавить пункт">';
+      html += '<button class="btn btn-success checklist-add">+</button>';
+      html += '</div></div></div></div>';
+      html += '</div>';
+
+      // Photos below
+      if (data.photos && data.photos.length > 0) {
+        html += '<div class="mt-3"><h6>Фотографии</h6><div class="d-flex flex-wrap gap-2">';
+        data.photos.forEach(function (p) {
+          html += '<a href="/uploads/photos/' + p.filename + '" target="_blank" title="' + p.original_name + '">';
+          html += '<img src="/uploads/photos/' + p.filename + '" style="width:120px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #ddd">';
+          html += '</a>';
+        });
+        html += '</div></div>';
+      }
+
+      body.innerHTML = html;
+      uploadDiv.style.display = 'block';
+      photoInput.value = '';
+      attachChecklistEvents(cardName);
+    })["catch"](function () {
+      body.innerHTML = '<div class="alert alert-danger">Ошибка загрузки данных</div>';
+    });
+  }
+
+  function escapeHtml(t) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(t));
+    return d.innerHTML;
+  }
+
+  function attachChecklistEvents(cardName) {
+    var titleInput = document.querySelector('.checklist-title');
+    var newInput = document.querySelector('.checklist-new-text');
+    var addBtn = document.querySelector('.checklist-add');
+    var ol = document.getElementById('checklistOl');
+
+    if (titleInput) {
+      titleInput.addEventListener('change', function () {
+        fetch('/registry/{{ registry.id }}/api/cards/' + encodeURIComponent(cardName) + '/list/title', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({title: this.value})
+        });
+      });
+    }
+
+    function addItem() {
+      var text = newInput.value.trim();
+      if (!text) return;
+      addBtn.disabled = true;
+      fetch('/registry/{{ registry.id }}/api/cards/' + encodeURIComponent(cardName) + '/list/items', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text: text})
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (res.ok) {
+          var li = document.createElement('li');
+          li.className = 'list-group-item d-flex justify-content-between align-items-center py-1 px-2';
+          li.dataset.id = res.id;
+          li.innerHTML = '<span class="checklist-text">' + escapeHtml(text) + '</span>';
+          li.innerHTML += '<button class="btn btn-sm btn-outline-danger py-0 px-1 checklist-del" data-id="' + res.id + '" title="Удалить">&times;</button>';
+          ol.appendChild(li);
+          newInput.value = '';
+        }
+        addBtn.disabled = false;
+      })["catch"](function () { addBtn.disabled = false; });
+    }
+
+    if (addBtn) {
+      addBtn.addEventListener('click', addItem);
+    }
+    if (newInput) {
+      newInput.addEventListener('keydown', function (e) { if (e.key === 'Enter') addItem(); });
+    }
+
+    ol.addEventListener('click', function (e) {
+      var del = e.target.closest('.checklist-del');
+      if (!del) return;
+      var id = del.dataset.id;
+      fetch('/registry/{{ registry.id }}/api/cards/' + encodeURIComponent(cardName) + '/list/items/' + id, { method: 'DELETE' })
+        .then(function () { del.closest('li').remove(); });
+    });
+  }
+
+  document.getElementById('exportBtn').addEventListener('click', function () {
+    window.location = '/registry/{{ registry.id }}/api/cards/' + encodeURIComponent(currentCardName) + '/export';
+  });
+
+  photoUploadBtn.addEventListener('click', function () {
+    var file = photoInput.files[0];
+    if (!file) { alert('Выберите файл'); return; }
+    var fd = new FormData();
+    fd.append('photo', file);
+    photoUploadBtn.disabled = true;
+    photoUploadBtn.textContent = 'Загрузка...';
+    fetch('/registry/{{ registry.id }}/api/cards/' + encodeURIComponent(currentCardName) + '/upload', {
+      method: 'POST', body: fd
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok) {
+        loadCardData(currentCardName);
+      } else {
+        alert(data.error || 'Ошибка загрузки');
+      }
+    })
+    .catch(function () { alert('Ошибка загрузки'); })
+    .finally(function () {
+      photoUploadBtn.disabled = false;
+      photoUploadBtn.textContent = 'Загрузить фото';
+    });
+  });
+});
+</script>
+{% endblock %}

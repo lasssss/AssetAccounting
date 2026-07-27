@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block title %}{{ asset.name }} — {{ registry.name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Реестры</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('registry_view', registry_id=registry.id) }}">{{ registry.name }}</a></li>
+    <li class="breadcrumb-item active">{{ asset.inventory_number }}</li>
+  </ol>
+</nav>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>{{ asset.name }}</h3>
+  <div>
+    <a href="{{ url_for('asset_edit', registry_id=registry.id, asset_id=asset.id) }}" class="btn btn-outline-secondary btn-sm">Редактировать</a>
+    <a href="{{ url_for('movement_create', registry_id=registry.id, asset_id=asset.id) }}" class="btn btn-outline-info btn-sm">Перемещение</a>
+    <a href="{{ url_for('registry_view', registry_id=registry.id) }}" class="btn btn-outline-primary btn-sm">К списку</a>
+  </div>
+</div>
+<div class="row mb-4">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">Основная информация</div>
+      <div class="card-body">
+        <table class="table table-sm">
+          <tr><th>Инв. №</th><td>{{ asset.inventory_number }}</td></tr>
+          <tr><th>Наименование</th><td>{{ asset.name }}</td></tr>
+          <tr><th>Категория</th><td>{{ asset.category_rel.name if asset.category_rel else '—' }}</td></tr>
+          <tr><th>Подразделение</th><td>{{ asset.department or '—' }}</td></tr>
+          <tr><th>Шифр</th><td>{{ asset.cipher or '—' }}</td></tr>
+          <tr><th>S/N</th><td>{{ asset.serial_number or '—' }}</td></tr>
+          <tr><th>Тип</th><td>{{ asset.equipment_type or '—' }}</td></tr>
+          <tr><th>Кол-во</th><td>{{ asset.quantity or 1 }} {{ asset.unit or '' }}</td></tr>
+          <tr><th>Стоимость</th><td>{{ "{:,.2f}".format(asset.initial_cost) }} ₽</td></tr>
+          <tr><th>Остаточная стоимость</th><td>{{ "{:,.2f}".format(asset.salvage_value) }} ₽</td></tr>
+          <tr><th>Срок пол.исп.</th><td>{{ asset.useful_life_months }} мес.</td></tr>
+          <tr><th>Дата ввода</th><td>{{ asset.start_date.isoformat() }}</td></tr>
+          <tr><th>Место</th><td>{{ asset.location or '—' }}</td></tr>
+          <tr><th>МОЛ</th><td>{{ asset.responsible_person or '—' }}</td></tr>
+          <tr><th>Карточка</th><td>{{ asset.card or '—' }}</td></tr>
+          <tr><th>Признак</th><td>{{ asset.indicator or '—' }}</td></tr>
+          <tr><th>Дата вывода (ЗИП)</th><td>{{ asset.inactive_date.isoformat() if asset.inactive_date else '—' }}</td></tr>
+          <tr><th>Дата работы (ЗИПа)</th><td>{{ asset.resume_date.isoformat() if asset.resume_date else '—' }}</td></tr>
+          <tr><th>Статус</th><td><span class="badge bg-{{ 'success' if asset.status == 'active' else 'primary' if asset.status == 'zip' else 'warning' if asset.status == 'repair' else 'secondary' if asset.status == 'disposed' else 'danger' if asset.status == 'for_disposal' else 'info' if asset.status == 'transferred' else 'dark' if asset.status == 'unused' else 'light text-dark' }}">{{ asset.status_display }}</span>
+            {% if asset.status_date %}<br><small>с {{ asset.status_date.isoformat() }}</small>{% endif %}</td></tr>
+          <tr><th>Примечания</th><td>{{ asset.notes or '—' }}</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card text-bg-primary mb-3"><div class="card-body text-center">
+      <h6>Ежемесячная амортизация</h6>
+      <p class="display-6">{{ "{:,.2f}".format(asset.monthly_depreciation) }} ₽</p>
+    </div></div>
+    <div class="card text-bg-warning mb-3"><div class="card-body text-center">
+      <h6>Накопленная амортизация</h6>
+      <p class="display-6">{{ "{:,.2f}".format(asset.accumulated_depreciation) }} ₽</p>
+    </div></div>
+    <div class="card text-bg-success mb-3"><div class="card-body text-center">
+      <h6>Остаточная стоимость</h6>
+      <p class="display-6">{{ "{:,.2f}".format(asset.residual_value) }} ₽</p>
+    </div></div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>Фотографии</span>
+    <div>
+      <input type="file" id="assetPhotoInput" accept="image/*" class="form-control form-control-sm d-inline-block w-auto" style="display:none">
+      <button type="button" class="btn btn-sm btn-outline-success" id="assetPhotoBtn">+ Добавить фото</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2" id="assetPhotoList">
+      {% if photos %}
+        {% for p in photos %}
+        <a href="/uploads/photos/{{ p.filename }}" target="_blank" title="{{ p.original_filename }}">
+          <img src="/uploads/photos/{{ p.filename }}" style="width:120px;height:90px;object-fit:cover;border-radius:6px;border:1px solid #ddd">
+        </a>
+        {% endfor %}
+      {% else %}
+        <p class="text-muted mb-0">Нет фотографий</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header">График амортизации</div>
+  <div class="card-body" style="max-height:300px;overflow-y:auto">
+    <table class="table table-sm table-striped">
+      <thead><tr><th>Месяц</th><th>Амортизация</th><th>Накоплено</th><th>Остаточная</th></tr></thead>
+      <tbody>
+        {% for row in depreciation_schedule[:asset.months_elapsed + 12] %}
+        <tr class="{{ 'table-warning' if row.month == asset.months_elapsed }}">
+          <td>{{ row.month }}</td><td>{{ "{:,.2f}".format(row.depreciation) }} ₽</td>
+          <td>{{ "{:,.2f}".format(row.accumulated) }} ₽</td><td>{{ "{:,.2f}".format(row.residual) }} ₽</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">История перемещений</div>
+  <div class="card-body">
+    {% if asset.movements %}
+    <table class="table table-sm">
+      <thead><tr><th>Дата</th><th>Тип</th><th>Откуда</th><th>Куда</th><th>Документ</th></tr></thead>
+      <tbody>
+        {% for m in asset.movements %}
+        <tr>
+          <td>{{ m.date.isoformat() }}</td>
+          <td>{{ 'Перемещение' if m.movement_type == 'transfer' else 'Списание' }}</td>
+          <td>{{ m.from_location or '—' }}</td><td>{{ m.to_location or '—' }}</td>
+          <td>{{ m.document_number or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="text-muted">Нет перемещений</p>{% endif %}
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header">История статусов</div>
+  <div class="card-body">
+    {% if status_logs %}
+    <table class="table table-sm">
+      <thead><tr><th>Дата</th><th>Старый статус</th><th>Новый статус</th><th>Комментарий</th></tr></thead>
+      <tbody>
+        {% for log in status_logs %}
+        <tr>
+          <td>{{ log.changed_at.isoformat() }}</td>
+          <td>{{ log.old_status or '—' }}</td>
+          <td>{{ log.new_status }}</td>
+          <td>{{ log.comment or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<p class="text-muted">История статусов пуста</p>{% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('assetPhotoBtn').addEventListener('click', function () {
+  document.getElementById('assetPhotoInput').click();
+});
+document.getElementById('assetPhotoInput').addEventListener('change', function () {
+  var file = this.files[0];
+  if (!file) return;
+  var fd = new FormData();
+  fd.append('photo', file);
+  var btn = document.getElementById('assetPhotoBtn');
+  btn.disabled = true;
+  btn.textContent = 'Загрузка...';
+  fetch('/registry/{{ registry.id }}/assets/{{ asset.id }}/upload', { method: 'POST', body: fd })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data.ok) {
+        location.reload();
+      } else {
+        alert(data.error || 'Ошибка');
+        btn.disabled = false;
+        btn.textContent = '+ Добавить фото';
+      }
+    })
+    .catch(function () {
+      alert('Ошибка загрузки');
+      btn.disabled = false;
+      btn.textContent = '+ Добавить фото';
+    });
+});
+</script>
+{% endblock %}

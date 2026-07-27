@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Импорт — {{ registry.name }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Реестры</a></li>
+    <li class="breadcrumb-item"><a href="{{ url_for('registry_view', registry_id=registry.id) }}">{{ registry.name }}</a></li>
+    <li class="breadcrumb-item active">Импорт Excel</li>
+  </ol>
+</nav>
+<div class="row mt-3">
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label">Файл Excel (.xlsx)</label>
+            <input type="file" name="file" class="form-control" accept=".xlsx,.xls" required>
+          </div>
+          <button type="submit" class="btn btn-success">Импортировать</button>
+          <a href="{{ url_for('registry_view', registry_id=registry.id) }}" class="btn btn-outline-secondary">Отмена</a>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card">
+      <div class="card-header">Поддерживаемые колонки</div>
+      <div class="card-body">
+        <ul class="small mb-0">
+          <li><strong>Инв. №</strong> *</li><li><strong>Наименование</strong> *</li>
+          <li>Подразделение</li><li>Шифр</li><li>Срок пол.исп.</li><li>Дата поступления</li>
+          <li>Стоимость</li><li>Остаточная стоимость</li><li>S/N</li><li>Тип</li>
+          <li>Место установки</li><li>Признак</li><li>МОЛ</li><li>Примечание</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
